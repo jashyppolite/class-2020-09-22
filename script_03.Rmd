@@ -40,8 +40,15 @@ sep_old <-
          title = course_title,
          name = course_name,
          department = course_department) %>% 
-  filter(u_grad > 10)
+  filter(u_grad > 10) %>%
+  group_by(id, title, name, department) %>%
+  summarize(u_grad = sum(u_grad), .groups = "drop")
 
+#sep_old <- sep_old %>%
+ # group_by(title) %>%
+  #summarize(sum(u_grad))
+
+sep_old
 # But this is not correct! Look for Gov 50: Data. What do you see? What can you
 # do to clean it up?
 ```
@@ -51,6 +58,26 @@ sep_old <-
 
 **Prompt:** Read in and clean the new data, creating an object called `sep_new`. 
 
+```{r}
+
+sep_new <- 
+  read_excel("new_data/class_enrollment_summary_by_term_9-22-2020.xlsx", 
+             skip = 3) %>% 
+  clean_names() %>% 
+  filter(! is.na(course_title)) %>% 
+  select(-grad, -non_degree, -x_reg, -vus, -employee, 
+         -withdraw, -total, -instructor_full_name, -course_section_code) %>%
+  rename(id = course_id,
+         title = course_title,
+         name = course_name,
+         department = course_department) %>% 
+  filter(u_grad > 10) %>%
+  group_by(id, title, name, department) %>%
+  summarize(ugrad = sum(u_grad), .groups = "drop")
+
+sep_new
+```
+
 
 
 ### Scene 2
@@ -59,19 +86,43 @@ sep_old <-
 
 
 Before we start on the model, Wisdom suggests we should:
-
+- figure out what we want to know 
+- recognize that we cant observe exactly why people decided to drop the courses
+- hypothesize why people are dropping these courses
+- throwing out irrelevant data, only using data relevant to the time period
+  we are interested in 
 
 
 
 After we have a model, Temperance suggests we should:
 
-
+- understand the limitations to our model 
+- understand that there is uncertainty in whatever conclusion we come to 
+- because observational and not a study, we can't use a randomized mechanism, 
+might be correlation that we can't see because those that are dropping might be
+doing so for a reason. not random rep of Harvard student body 
+- we cant observe the data on people who almost dropped, only know the 
+people that did
 
 ### Scene 3
 
 **Prompt:** Which classes had the biggest increases and decreases in undergraduate enrollments between September 1 and today? Make a graphic that shows the 5 biggest increases and decreases. Make it look nice.
 
+```{r}
 
+inner_join(sep_new, sep_old) %>%
+  mutate(change = (u_grad - ugrad)) %>%
+  arrange(desc(abs(change))) %>%
+  slice(1:10) %>%
+  ggplot(aes(x = title, y = change, fill = title)) + geom_col() + 
+  labs( title = " Top 10 Classes with Greatest Change in Enrollment",
+        x = "Course",
+        y = "Change in Enrollment") +
+  scale_color_manual(name = "Department", values = title) +
+  theme_light()
+ 
+
+```
 
 
 
